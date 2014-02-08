@@ -20,11 +20,10 @@ type ExecutionResponse struct {
 }
 
 type Command struct {
+	response  *ExecutionResponse
 	cmd       *exec.Cmd
 	stdout    bytes.Buffer
 	stderr    bytes.Buffer
-	combined  []byte
-	response  *ExecutionResponse
 	startTime time.Time
 	endTime   time.Time
 	timeout   time.Duration
@@ -37,6 +36,10 @@ func NewCommand(name string, arg ...string) *Command {
 	}
 
 	return cmd
+}
+
+func (self *Command) SetTimeout(timeout time.Duration) {
+	self.timeout = timeout
 }
 
 func (self *Command) Run() error {
@@ -65,6 +68,7 @@ func (self *Command) Wait() error {
 			if err != errorTimeout {
 				return err
 			} else {
+				exitCode = -1
 				self.cmd.Process.Kill()
 			}
 		}
@@ -74,6 +78,10 @@ func (self *Command) Wait() error {
 	self.buildResponse(exitCode)
 
 	return nil
+}
+
+func (self *Command) Kill() error {
+	return self.cmd.Process.Kill()
 }
 
 func (self *Command) doWait() error {

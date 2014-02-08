@@ -29,6 +29,43 @@ func (self *CommandSuite) TestBasic(c *C) {
 	c.Assert(int(response.Elapsed/time.Second), Aprox, 1, 0.10)
 }
 
+func (self *CommandSuite) TestBasicWithTimeout(c *C) {
+	cmd := NewCommand("./test", "-exit=0", "-time=2")
+	cmd.SetTimeout(1 * time.Second)
+	cmd.Run()
+	cmd.Wait()
+
+	response := cmd.GetResponse()
+
+	c.Assert(response.Failed, Equals, true)
+	c.Assert(response.ExitCode, Equals, -1)
+	c.Assert(response.Stdout, HasLen, 588895)
+	c.Assert(response.Stderr, HasLen, 0)
+	c.Assert(response.Pid, Not(Equals), 0)
+	c.Assert(int(response.Elapsed/time.Second), Aprox, 1, 0.10)
+}
+
+func (self *CommandSuite) TestKill(c *C) {
+	cmd := NewCommand("./test", "-exit=0", "-time=2")
+
+	go func() {
+		time.Sleep(1 * time.Second)
+		cmd.Kill()
+	}()
+
+	cmd.Run()
+	cmd.Wait()
+
+	response := cmd.GetResponse()
+
+	c.Assert(response.Failed, Equals, true)
+	c.Assert(response.ExitCode, Equals, -1)
+	c.Assert(response.Stdout, HasLen, 588895)
+	c.Assert(response.Stderr, HasLen, 0)
+	c.Assert(response.Pid, Not(Equals), 0)
+	c.Assert(int(response.Elapsed/time.Second), Aprox, 1, 0.10)
+}
+
 var Aprox Checker = &aproxChecker{&CheckerInfo{
 	Name: "Aprox",
 	Params: []string{
