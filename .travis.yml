@@ -7,4 +7,5 @@ go:
 
 script:
   - go get launchpad.net/gocheck
+  - go build test.go
   - go test
