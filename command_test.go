@@ -26,7 +26,10 @@ func (self *CommandSuite) TestBasic(c *C) {
 	c.Assert(response.Stdout, HasLen, 588895)
 	c.Assert(response.Stderr, HasLen, 0)
 	c.Assert(response.Pid, Not(Equals), 0)
-	c.Assert(int(response.Elapsed/time.Second), Aprox, 1, 0.10)
+	c.Assert(int(response.RealTime/time.Second), Aprox, 1, 0.10)
+	c.Assert(int(response.UserTime), Not(Equals), 0)
+	c.Assert(int(response.SysTime), Not(Equals), 0)
+	c.Assert(int(response.Rusage.Utime.Usec), Not(Equals), 0)
 }
 
 func (self *CommandSuite) TestBasicWithTimeout(c *C) {
@@ -35,6 +38,7 @@ func (self *CommandSuite) TestBasicWithTimeout(c *C) {
 	cmd.Run()
 	cmd.Wait()
 
+	return
 	response := cmd.GetResponse()
 
 	c.Assert(response.Failed, Equals, true)
@@ -42,7 +46,8 @@ func (self *CommandSuite) TestBasicWithTimeout(c *C) {
 	c.Assert(response.Stdout, HasLen, 588895)
 	c.Assert(response.Stderr, HasLen, 0)
 	c.Assert(response.Pid, Not(Equals), 0)
-	c.Assert(int(response.Elapsed/time.Second), Aprox, 1, 0.10)
+	c.Assert(int(response.RealTime/time.Second), Aprox, 1, 0.10)
+	c.Assert(int(response.UserTime), Not(Equals), 0)
 }
 
 func (self *CommandSuite) TestKill(c *C) {
@@ -63,7 +68,8 @@ func (self *CommandSuite) TestKill(c *C) {
 	c.Assert(response.Stdout, HasLen, 588895)
 	c.Assert(response.Stderr, HasLen, 0)
 	c.Assert(response.Pid, Not(Equals), 0)
-	c.Assert(int(response.Elapsed/time.Second), Aprox, 1, 0.10)
+	c.Assert(int(response.RealTime/time.Second), Aprox, 1, 0.10)
+	c.Assert(int(response.UserTime), Not(Equals), 0)
 }
 
 var Aprox Checker = &aproxChecker{&CheckerInfo{

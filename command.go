@@ -11,12 +11,15 @@ import (
 var errorTimeout = errors.New("error: execution timeout")
 
 type ExecutionResponse struct {
-	Elapsed  time.Duration
+	RealTime time.Duration
+	UserTime time.Duration
+	SysTime  time.Duration
 	Stdout   []byte
 	Stderr   []byte
 	Pid      int
 	ExitCode int
 	Failed   bool
+	Rusage   *syscall.Rusage
 }
 
 type Command struct {
@@ -30,6 +33,8 @@ type Command struct {
 	failed    bool
 }
 
+// NewCommand returns the Command struct to execute the named program with
+// the given arguments.
 func NewCommand(name string, arg ...string) *Command {
 	cmd := &Command{
 		cmd: exec.Command(name, arg...),
@@ -38,10 +43,16 @@ func NewCommand(name string, arg ...string) *Command {
 	return cmd
 }
 
+// SetTimeout configure the limit amount of time to run
 func (self *Command) SetTimeout(timeout time.Duration) {
 	self.timeout = timeout
 }
 
+// Run starts the specified command and waits for it to complete.
+//
+// The returned error is nil if the command runs, has no problems
+// copying stdin, stdout, and stderr, and exits with a zero exit
+// status.
 func (self *Command) Run() error {
 	self.cmd.Stdout = &self.stdout
 	self.cmd.Stderr = &self.stderr
@@ -55,6 +66,7 @@ func (self *Command) Run() error {
 	return nil
 }
 
+// Wait waits for the Command to exit.
 func (self *Command) Wait() error {
 	exitCode := 0
 	if err := self.doWait(); err != nil {
@@ -69,7 +81,7 @@ func (self *Command) Wait() error {
 				return err
 			} else {
 				exitCode = -1
-				self.cmd.Process.Kill()
+				self.Kill()
 			}
 		}
 	}
@@ -80,6 +92,7 @@ func (self *Command) Wait() error {
 	return nil
 }
 
+// Kill causes the Command to exit immediately.
 func (self *Command) Kill() error {
 	return self.cmd.Process.Kill()
 }
@@ -97,25 +110,23 @@ func (self *Command) doWaitWithoutTimeout() error {
 }
 
 func (self *Command) doWaitWithTimeout() error {
-	done := make(chan error)
 	go func() {
-		done <- self.cmd.Wait()
+		time.Sleep(self.timeout)
+		self.Kill()
 	}()
 
-	select {
-	case err := <-done:
-		return err
-	case <-time.After(self.timeout):
-		return errorTimeout
-	}
+	return self.cmd.Wait()
 }
 
 func (self *Command) buildResponse(exitCode int) {
 	response := &ExecutionResponse{
+		ExitCode: exitCode,
+		RealTime: self.endTime.Sub(self.startTime),
+		UserTime: self.cmd.ProcessState.UserTime(),
+		SysTime:  self.cmd.ProcessState.UserTime(),
+		Rusage:   self.cmd.ProcessState.SysUsage().(*syscall.Rusage),
 		Stdout:   self.stdout.Bytes(),
 		Stderr:   self.stderr.Bytes(),
-		ExitCode: exitCode,
-		Elapsed:  self.endTime.Sub(self.startTime),
 		Pid:      self.cmd.Process.Pid,
 		Failed:   self.failed,
 	}
@@ -123,6 +134,8 @@ func (self *Command) buildResponse(exitCode int) {
 	self.response = response
 }
 
+// GetResponse returns a ExecutionResponse struct, must be called at the end
+// of the execution
 func (self *Command) GetResponse() *ExecutionResponse {
 	return self.response
 }

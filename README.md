@@ -26,23 +26,23 @@ import (
 Basic example:
 
 ```go
-    cmd := NewCommand("./test", "-exit=0", "-time=1", "-max=1")
-    if err := cmd.Run(); err != nil {
-        panic(err)
-    }
+cmd := NewCommand("./test", "-exit=0", "-time=1", "-max=1")
+if err := cmd.Run(); err != nil {
+    panic(err)
+}
 
-    if err := cmd.Wait(); err != nil {
-        panic(err)
-    }
+if err := cmd.Wait(); err != nil {
+    panic(err)
+}
 
-    response := cmd.GetResponse()
-    fmt.Printf("Failed: %v, ExitCode: %d, Elapsed: %s",
-        response.Failed,
-        response.ExitCode,
-        response.Elapsed,
-    )
+response := cmd.GetResponse()
+fmt.Printf("Failed: %v, ExitCode: %d, Elapsed: %s",
+    response.Failed,
+    response.ExitCode,
+    response.RealTime,
+)
 
-    //Return: Failed: false, ExitCode: 0, Elapsed: 1.004233166s
+//Return: Failed: false, ExitCode: 0, RealTime: 1.004233166s
 ```
 
 License
