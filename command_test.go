@@ -15,7 +15,7 @@ type CommandSuite struct{}
 var _ = Suite(&CommandSuite{})
 
 func (self *CommandSuite) TestBasic(c *C) {
-	cmd := NewCommand("./test", "-exit=0", "-time=1")
+	cmd := NewCommand("./test -exit=0 -time=1")
 	cmd.Run()
 	cmd.Wait()
 
@@ -33,12 +33,11 @@ func (self *CommandSuite) TestBasic(c *C) {
 }
 
 func (self *CommandSuite) TestBasicWithTimeout(c *C) {
-	cmd := NewCommand("./test", "-exit=0", "-time=2")
+	cmd := NewCommand("./test -exit=0 -time=2")
 	cmd.SetTimeout(1 * time.Second)
 	cmd.Run()
 	cmd.Wait()
 
-	return
 	response := cmd.GetResponse()
 
 	c.Assert(response.Failed, Equals, true)
@@ -51,11 +50,12 @@ func (self *CommandSuite) TestBasicWithTimeout(c *C) {
 }
 
 func (self *CommandSuite) TestKill(c *C) {
-	cmd := NewCommand("./test", "-exit=0", "-time=2")
+	cmd := NewCommand("./test -exit=0 -time=2")
 
 	go func() {
 		time.Sleep(1 * time.Second)
 		cmd.Kill()
+		print("hola")
 	}()
 
 	cmd.Run()

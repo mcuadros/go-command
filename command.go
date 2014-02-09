@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+var shell = [2]string{"/bin/sh", "-s"}
 var errorTimeout = errors.New("error: execution timeout")
 
 type ExecutionResponse struct {
@@ -25,6 +26,7 @@ type ExecutionResponse struct {
 type Command struct {
 	response  *ExecutionResponse
 	cmd       *exec.Cmd
+	stdin     *bytes.Buffer
 	stdout    bytes.Buffer
 	stderr    bytes.Buffer
 	startTime time.Time
@@ -35,9 +37,9 @@ type Command struct {
 
 // NewCommand returns the Command struct to execute the named program with
 // the given arguments.
-func NewCommand(name string, arg ...string) *Command {
+func NewCommand(commands string) *Command {
 	cmd := &Command{
-		cmd: exec.Command(name, arg...),
+		stdin: bytes.NewBufferString(commands),
 	}
 
 	return cmd
@@ -54,6 +56,8 @@ func (self *Command) SetTimeout(timeout time.Duration) {
 // copying stdin, stdout, and stderr, and exits with a zero exit
 // status.
 func (self *Command) Run() error {
+	self.cmd = exec.Command(shell[0], shell[1])
+	self.cmd.Stdin = self.stdin
 	self.cmd.Stdout = &self.stdout
 	self.cmd.Stderr = &self.stderr
 
@@ -69,6 +73,7 @@ func (self *Command) Run() error {
 // Wait waits for the Command to exit.
 func (self *Command) Wait() error {
 	exitCode := 0
+
 	if err := self.doWait(); err != nil {
 		self.failed = true
 
