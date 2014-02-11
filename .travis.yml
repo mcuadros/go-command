@@ -9,4 +9,4 @@ script:
   - go get launchpad.net/gocheck
   - go build tests/test.go
   - ls
-  - go test
+  - go test --travis

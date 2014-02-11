@@ -1,11 +1,15 @@
 package command
 
 import (
+	"flag"
 	"fmt"
 	"testing"
 	"time"
 )
+
 import . "launchpad.net/gocheck"
+
+var travis = flag.Bool("travis", false, "Enable it if the tests runs in TravisCI")
 
 // Hook up gocheck into the "go test" runner.
 func Test(t *testing.T) { TestingT(t) }
@@ -72,6 +76,10 @@ func (self *CommandSuite) TestKill(c *C) {
 }
 
 func (self *CommandSuite) TestSetUser(c *C) {
+	if *travis {
+		c.Skip("Running at TravisCI")
+	}
+
 	cmd := NewCommand("./test -exit=0 -time=1")
 	cmd.SetUser("daemon")
 	if err := cmd.Run(); err != nil {
