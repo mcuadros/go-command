@@ -26,7 +26,7 @@ func (self *CommandSuite) TestBasic(c *C) {
 	c.Assert(response.Stdout, HasLen, 588895)
 	c.Assert(response.Stderr, HasLen, 0)
 	c.Assert(response.Pid, Not(Equals), 0)
-	c.Assert(int(response.RealTime/time.Second), Aprox, 1, 0.10)
+	c.Assert(int(response.RealTime/time.Second), Equals, 1)
 	c.Assert(int(response.UserTime), Not(Equals), 0)
 	c.Assert(int(response.SysTime), Not(Equals), 0)
 	c.Assert(int(response.Rusage.Utime.Usec), Not(Equals), 0)
@@ -45,7 +45,7 @@ func (self *CommandSuite) TestBasicWithTimeout(c *C) {
 	c.Assert(response.Stdout, HasLen, 588895)
 	c.Assert(response.Stderr, HasLen, 0)
 	c.Assert(response.Pid, Not(Equals), 0)
-	c.Assert(int(response.RealTime/time.Second), Aprox, 1, 0.10)
+	c.Assert(int(response.RealTime/time.Second), Equals, 1)
 	c.Assert(int(response.UserTime), Not(Equals), 0)
 }
 
@@ -55,7 +55,6 @@ func (self *CommandSuite) TestKill(c *C) {
 	go func() {
 		time.Sleep(1 * time.Second)
 		cmd.Kill()
-		print("hola")
 	}()
 
 	cmd.Run()
@@ -68,53 +67,30 @@ func (self *CommandSuite) TestKill(c *C) {
 	c.Assert(response.Stdout, HasLen, 588895)
 	c.Assert(response.Stderr, HasLen, 0)
 	c.Assert(response.Pid, Not(Equals), 0)
-	c.Assert(int(response.RealTime/time.Second), Aprox, 1, 0.10)
+	c.Assert(int(response.RealTime/time.Second), Equals, 1)
 	c.Assert(int(response.UserTime), Not(Equals), 0)
 }
 
-var Aprox Checker = &aproxChecker{&CheckerInfo{
-	Name: "Aprox",
-	Params: []string{
-		"Value",
-		"Aproximate value",
-		"Margin",
-	},
-}}
-
-type aproxChecker struct {
-	*CheckerInfo
-}
-
-func (c *aproxChecker) Check(params []interface{}, names []string) (result bool, error string) {
-	var value, match, margin float64
-
-	if param, ok := params[0].(int); !ok {
-		return false, "First parameter is not an int"
-	} else {
-		value = float64(param)
+func (self *CommandSuite) TestSetUser(c *C) {
+	cmd := NewCommand("./test -exit=0 -time=1")
+	cmd.SetUser("daemon")
+	if err := cmd.Run(); err != nil {
+		fmt.Println(err)
+		c.Fail()
+		return
 	}
 
-	if param, ok := params[1].(int); !ok {
-		return false, "Second parameter is not an int"
-	} else {
-		match = float64(param)
-	}
+	cmd.Wait()
 
-	if param, ok := params[2].(float64); !ok {
-		return false, "Third parameter is not an float64"
-	} else {
-		margin = float64(param)
-	}
+	response := cmd.GetResponse()
 
-	lowBound := match - (match * margin)
-	if value < lowBound {
-		return false, fmt.Sprintf("Lower than bound %f", lowBound)
-	}
-
-	highBound := match + (match * margin)
-	if value > highBound {
-		return false, fmt.Sprintf("Higher than bound %f", highBound)
-	}
-
-	return true, ""
+	c.Assert(response.Failed, Equals, false)
+	c.Assert(response.ExitCode, Equals, 0)
+	c.Assert(response.Stdout, HasLen, 588895)
+	c.Assert(response.Stderr, HasLen, 0)
+	c.Assert(response.Pid, Not(Equals), 0)
+	c.Assert(int(response.RealTime/time.Second), Equals, 1)
+	c.Assert(int(response.UserTime), Not(Equals), 0)
+	c.Assert(int(response.SysTime), Not(Equals), 0)
+	c.Assert(int(response.Rusage.Utime.Usec), Not(Equals), 0)
 }
