@@ -55,13 +55,13 @@ func (self *CommandSuite) TestBasicWithTimeout(c *C) {
 
 func (self *CommandSuite) TestKill(c *C) {
 	cmd := NewCommand("./test -exit=0 -time=2")
+	cmd.Run()
 
 	go func() {
 		time.Sleep(1 * time.Second)
 		cmd.Kill()
 	}()
 
-	cmd.Run()
 	cmd.Wait()
 
 	response := cmd.GetResponse()
