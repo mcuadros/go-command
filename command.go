@@ -35,10 +35,14 @@ type Command struct {
 	stderr    bytes.Buffer
 	startTime time.Time
 	endTime   time.Time
-	timeout   time.Duration
 	failed    bool
 	exitCode  int
-	user      string
+	params    struct {
+		user        string
+		timeout     time.Duration
+		workingDir  string
+		environment []string
+	}
 }
 
 // NewCommand returns the Command struct to execute the named program with
@@ -53,12 +57,24 @@ func NewCommand(command string) *Command {
 
 // SetTimeout configure the limit amount of time to run
 func (self *Command) SetTimeout(timeout time.Duration) {
-	self.timeout = timeout
+	self.params.timeout = timeout
 }
 
 // SetUsername execute a command as this user (need sudo privilegies)
 func (self *Command) SetUser(username string) {
-	self.user = username
+	self.params.user = username
+}
+
+// SetWorkingDir sets the working directory of the command. If not is set,
+// Run runs the command in the calling process's current directory.
+func (self *Command) SetWorkingDir(workingDir string) {
+	self.params.workingDir = workingDir
+}
+
+// SetEnvironment sets the environment of the process. If not is set,
+// Run uses the current process's environment.
+func (self *Command) SetEnvironment(environment []string) {
+	self.params.environment = environment
 }
 
 // Run starts the specified command and waits for it to complete.
@@ -93,6 +109,14 @@ func (self *Command) buildExecCmd() {
 		Path: aname,
 		Args: arguments,
 	}
+
+	if self.params.workingDir != "" {
+		self.cmd.Dir = self.params.workingDir
+	}
+
+	if self.params.environment != nil {
+		self.cmd.Env = self.params.environment
+	}
 }
 
 func (self *Command) setOutput() {
@@ -101,11 +125,11 @@ func (self *Command) setOutput() {
 }
 
 func (self *Command) setCredentials() error {
-	if self.user == "" {
+	if self.params.user == "" {
 		return nil
 	}
 
-	uid, gid, err := self.getUidAndGidInfo(self.user)
+	uid, gid, err := self.getUidAndGidInfo(self.params.user)
 	if err != nil {
 		return err
 	}
@@ -161,7 +185,7 @@ func (self *Command) Kill() error {
 }
 
 func (self *Command) doWait() error {
-	if self.timeout != 0 {
+	if self.params.timeout != 0 {
 		return self.doWaitWithTimeout()
 	}
 
@@ -174,7 +198,7 @@ func (self *Command) doWaitWithoutTimeout() error {
 
 func (self *Command) doWaitWithTimeout() error {
 	go func() {
-		time.Sleep(self.timeout)
+		time.Sleep(self.params.timeout)
 		self.Kill()
 	}()
 
@@ -192,7 +216,7 @@ func (self *Command) buildResponse() {
 		Pid:      self.cmd.Process.Pid,
 		Failed:   self.failed,
 		ExitCode: self.exitCode,
-		User:     self.user,
+		User:     self.params.user,
 	}
 
 	self.response = response
