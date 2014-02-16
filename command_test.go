@@ -48,7 +48,6 @@ func (self *CommandSuite) TestBasicWithTimeout(c *C) {
 	c.Assert(response.Failed, Equals, true)
 	c.Assert(response.ExitCode, Equals, -1)
 	c.Assert(int(response.RealTime/time.Second), Equals, 1)
-	c.Assert(int(response.UserTime), Not(Equals), 0)
 }
 
 func (self *CommandSuite) TestKill(c *C) {
@@ -67,7 +66,6 @@ func (self *CommandSuite) TestKill(c *C) {
 	c.Assert(response.Failed, Equals, true)
 	c.Assert(response.ExitCode, Equals, -1)
 	c.Assert(int(response.RealTime/time.Second), Equals, 1)
-	c.Assert(int(response.UserTime), Not(Equals), 0)
 }
 
 func (self *CommandSuite) TestSetUser(c *C) {
