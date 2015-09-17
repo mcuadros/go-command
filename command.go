@@ -18,8 +18,8 @@ type ExecutionResponse struct {
 	RealTime time.Duration
 	UserTime time.Duration
 	SysTime  time.Duration
-	Stdout   []byte
-	Stderr   []byte
+	Stdout   *bytes.Buffer
+	Stderr   *bytes.Buffer
 	Pid      int
 	ExitCode int
 	Failed   bool
@@ -28,11 +28,13 @@ type ExecutionResponse struct {
 }
 
 type Command struct {
+	Stdout *bytes.Buffer
+	Stderr *bytes.Buffer
+	Pid    int
+
 	response  *ExecutionResponse
 	cmd       *exec.Cmd
 	command   string
-	stdout    bytes.Buffer
-	stderr    bytes.Buffer
 	startTime time.Time
 	endTime   time.Time
 	failed    bool
@@ -49,6 +51,8 @@ type Command struct {
 // the given arguments.
 func NewCommand(command string) *Command {
 	cmd := &Command{
+		Stdout:  bytes.NewBuffer(nil),
+		Stderr:  bytes.NewBuffer(nil),
 		command: command,
 	}
 
@@ -60,7 +64,7 @@ func (c *Command) SetTimeout(timeout time.Duration) {
 	c.params.timeout = timeout
 }
 
-// SetUsername execute a command as this user (need sudo privilegies)
+// SetUser execute a command as this user (need sudo privilegies)
 func (c *Command) SetUser(username string) {
 	c.params.user = username
 }
@@ -94,6 +98,7 @@ func (c *Command) Run() error {
 	}
 
 	c.startTime = time.Now()
+	c.Pid = c.cmd.Process.Pid
 
 	return nil
 }
@@ -120,8 +125,8 @@ func (c *Command) buildExecCmd() {
 }
 
 func (c *Command) setOutput() {
-	c.cmd.Stdout = &c.stdout
-	c.cmd.Stderr = &c.stderr
+	c.cmd.Stdout = c.Stdout
+	c.cmd.Stderr = c.Stderr
 }
 
 func (c *Command) setCredentials() error {
@@ -129,7 +134,7 @@ func (c *Command) setCredentials() error {
 		return nil
 	}
 
-	uid, gid, err := c.getUidAndGidInfo(c.params.user)
+	uid, gid, err := c.getUIDAndGIDInfo(c.params.user)
 	if err != nil {
 		return err
 	}
@@ -140,7 +145,7 @@ func (c *Command) setCredentials() error {
 	return nil
 }
 
-func (c *Command) getUidAndGidInfo(username string) (uint32, uint32, error) {
+func (c *Command) getUIDAndGIDInfo(username string) (uint32, uint32, error) {
 	user, err := user.Lookup(username)
 	if err != nil {
 		return 0, 0, err
@@ -164,9 +169,9 @@ func (c *Command) Wait() error {
 		} else {
 			if err != errorTimeout {
 				return err
-			} else {
-				c.Kill()
 			}
+
+			c.Kill()
 		}
 	}
 
@@ -211,8 +216,8 @@ func (c *Command) buildResponse() {
 		UserTime: c.cmd.ProcessState.UserTime(),
 		SysTime:  c.cmd.ProcessState.UserTime(),
 		Rusage:   c.cmd.ProcessState.SysUsage().(*syscall.Rusage),
-		Stdout:   c.stdout.Bytes(),
-		Stderr:   c.stderr.Bytes(),
+		Stdout:   c.Stdout,
+		Stderr:   c.Stderr,
 		Pid:      c.cmd.Process.Pid,
 		Failed:   c.failed,
 		ExitCode: c.exitCode,

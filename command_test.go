@@ -22,14 +22,16 @@ var _ = Suite(&CommandSuite{})
 func (s *CommandSuite) TestBasic(c *C) {
 	cmd := NewCommand("./tests/test -exit=0 -time=1 -max=100000")
 	cmd.Run()
+	c.Assert(cmd.Pid, Not(Equals), 0)
+
 	cmd.Wait()
 
 	response := cmd.GetResponse()
 
 	c.Assert(response.Failed, Equals, false)
 	c.Assert(response.ExitCode, Equals, 0)
-	c.Assert(response.Stdout, HasLen, 588895)
-	c.Assert(response.Stderr, HasLen, 0)
+	c.Assert(response.Stdout.Len(), Equals, 588895)
+	c.Assert(response.Stderr.Len(), Equals, 0)
 	c.Assert(response.Pid, Not(Equals), 0)
 	c.Assert(int(response.RealTime/time.Second), Equals, 1)
 	c.Assert(int(response.UserTime), Not(Equals), 0)
@@ -103,7 +105,7 @@ func (s *CommandSuite) TestSetWorkingDir(c *C) {
 
 	c.Assert(response.Failed, Equals, false)
 	c.Assert(response.ExitCode, Equals, 0)
-	c.Assert(string(response.Stdout), Equals, wd+"\n")
+	c.Assert(response.Stdout.String(), Equals, wd+"\n")
 }
 
 func (s *CommandSuite) TestSetEnvironment(c *C) {
@@ -116,5 +118,5 @@ func (s *CommandSuite) TestSetEnvironment(c *C) {
 
 	c.Assert(response.Failed, Equals, false)
 	c.Assert(response.ExitCode, Equals, 0)
-	c.Assert(string(response.Stdout), Equals, "FOO=bar\n")
+	c.Assert(response.Stdout.String(), Equals, "FOO=bar\n")
 }
