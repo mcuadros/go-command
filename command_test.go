@@ -6,9 +6,9 @@ import (
 	"os"
 	"testing"
 	"time"
-)
 
-import . "launchpad.net/gocheck"
+	. "gopkg.in/check.v1"
+)
 
 var travis = flag.Bool("travis", false, "Enable it if the tests runs in TravisCI")
 
@@ -19,7 +19,7 @@ type CommandSuite struct{}
 
 var _ = Suite(&CommandSuite{})
 
-func (self *CommandSuite) TestBasic(c *C) {
+func (s *CommandSuite) TestBasic(c *C) {
 	cmd := NewCommand("./tests/test -exit=0 -time=1 -max=100000")
 	cmd.Run()
 	cmd.Wait()
@@ -37,7 +37,7 @@ func (self *CommandSuite) TestBasic(c *C) {
 	c.Assert(int(response.Rusage.Utime.Usec), Not(Equals), 0)
 }
 
-func (self *CommandSuite) TestBasicWithTimeout(c *C) {
+func (s *CommandSuite) TestBasicWithTimeout(c *C) {
 	cmd := NewCommand("./tests/test -exit=0 -time=2")
 	cmd.SetTimeout(1 * time.Second)
 	cmd.Run()
@@ -50,7 +50,7 @@ func (self *CommandSuite) TestBasicWithTimeout(c *C) {
 	c.Assert(int(response.RealTime/time.Second), Equals, 1)
 }
 
-func (self *CommandSuite) TestKill(c *C) {
+func (s *CommandSuite) TestKill(c *C) {
 	cmd := NewCommand("./tests/test -exit=0 -time=2")
 	cmd.Run()
 
@@ -68,7 +68,7 @@ func (self *CommandSuite) TestKill(c *C) {
 	c.Assert(int(response.RealTime/time.Second), Equals, 1)
 }
 
-func (self *CommandSuite) TestSetUser(c *C) {
+func (s *CommandSuite) TestSetUser(c *C) {
 	if *travis {
 		c.Skip("Running at TravisCI")
 	}
@@ -89,7 +89,7 @@ func (self *CommandSuite) TestSetUser(c *C) {
 	c.Assert(response.ExitCode, Equals, 0)
 }
 
-func (self *CommandSuite) TestSetWorkingDir(c *C) {
+func (s *CommandSuite) TestSetWorkingDir(c *C) {
 	cmd := NewCommand("./test -exit=0 -wd")
 
 	cwd, _ := os.Getwd()
@@ -106,7 +106,7 @@ func (self *CommandSuite) TestSetWorkingDir(c *C) {
 	c.Assert(string(response.Stdout), Equals, wd+"\n")
 }
 
-func (self *CommandSuite) TestSetEnvironment(c *C) {
+func (s *CommandSuite) TestSetEnvironment(c *C) {
 	cmd := NewCommand("./tests/test -exit=0 -env")
 	cmd.SetEnvironment([]string{"FOO=bar"})
 	cmd.Run()

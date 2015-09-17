@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"syscall"
 	"time"
-)
 
-import "github.com/gobs/args"
+	"github.com/gobs/args"
+)
 
 var errorTimeout = errors.New("error: execution timeout")
 
@@ -56,25 +56,25 @@ func NewCommand(command string) *Command {
 }
 
 // SetTimeout configure the limit amount of time to run
-func (self *Command) SetTimeout(timeout time.Duration) {
-	self.params.timeout = timeout
+func (c *Command) SetTimeout(timeout time.Duration) {
+	c.params.timeout = timeout
 }
 
 // SetUsername execute a command as this user (need sudo privilegies)
-func (self *Command) SetUser(username string) {
-	self.params.user = username
+func (c *Command) SetUser(username string) {
+	c.params.user = username
 }
 
 // SetWorkingDir sets the working directory of the command. If not is set,
 // Run runs the command in the calling process's current directory.
-func (self *Command) SetWorkingDir(workingDir string) {
-	self.params.workingDir = workingDir
+func (c *Command) SetWorkingDir(workingDir string) {
+	c.params.workingDir = workingDir
 }
 
 // SetEnvironment sets the environment of the process. If not is set,
 // Run uses the current process's environment.
-func (self *Command) SetEnvironment(environment []string) {
-	self.params.environment = environment
+func (c *Command) SetEnvironment(environment []string) {
+	c.params.environment = environment
 }
 
 // Run starts the specified command and waits for it to complete.
@@ -82,65 +82,65 @@ func (self *Command) SetEnvironment(environment []string) {
 // The returned error is nil if the command runs, has no problems
 // copying stdin, stdout, and stderr, and exits with a zero exit
 // status.
-func (self *Command) Run() error {
-	self.buildExecCmd()
-	self.setOutput()
-	if err := self.setCredentials(); err != nil {
+func (c *Command) Run() error {
+	c.buildExecCmd()
+	c.setOutput()
+	if err := c.setCredentials(); err != nil {
 		return err
 	}
 
-	if err := self.cmd.Start(); err != nil {
+	if err := c.cmd.Start(); err != nil {
 		return err
 	}
 
-	self.startTime = time.Now()
+	c.startTime = time.Now()
 
 	return nil
 }
 
-func (self *Command) buildExecCmd() {
-	arguments := args.GetArgs(self.command)
+func (c *Command) buildExecCmd() {
+	arguments := args.GetArgs(c.command)
 	aname, err := exec.LookPath(arguments[0])
 	if err != nil {
 		aname = arguments[0]
 	}
 
-	self.cmd = &exec.Cmd{
+	c.cmd = &exec.Cmd{
 		Path: aname,
 		Args: arguments,
 	}
 
-	if self.params.workingDir != "" {
-		self.cmd.Dir = self.params.workingDir
+	if c.params.workingDir != "" {
+		c.cmd.Dir = c.params.workingDir
 	}
 
-	if self.params.environment != nil {
-		self.cmd.Env = self.params.environment
+	if c.params.environment != nil {
+		c.cmd.Env = c.params.environment
 	}
 }
 
-func (self *Command) setOutput() {
-	self.cmd.Stdout = &self.stdout
-	self.cmd.Stderr = &self.stderr
+func (c *Command) setOutput() {
+	c.cmd.Stdout = &c.stdout
+	c.cmd.Stderr = &c.stderr
 }
 
-func (self *Command) setCredentials() error {
-	if self.params.user == "" {
+func (c *Command) setCredentials() error {
+	if c.params.user == "" {
 		return nil
 	}
 
-	uid, gid, err := self.getUidAndGidInfo(self.params.user)
+	uid, gid, err := c.getUidAndGidInfo(c.params.user)
 	if err != nil {
 		return err
 	}
 
-	self.cmd.SysProcAttr = &syscall.SysProcAttr{}
-	self.cmd.SysProcAttr.Credential = &syscall.Credential{Uid: uid, Gid: gid}
+	c.cmd.SysProcAttr = &syscall.SysProcAttr{}
+	c.cmd.SysProcAttr.Credential = &syscall.Credential{Uid: uid, Gid: gid}
 
 	return nil
 }
 
-func (self *Command) getUidAndGidInfo(username string) (uint32, uint32, error) {
+func (c *Command) getUidAndGidInfo(username string) (uint32, uint32, error) {
 	user, err := user.Lookup(username)
 	if err != nil {
 		return 0, 0, err
@@ -153,77 +153,77 @@ func (self *Command) getUidAndGidInfo(username string) (uint32, uint32, error) {
 }
 
 // Wait waits for the Command to exit.
-func (self *Command) Wait() error {
-	if err := self.doWait(); err != nil {
-		self.failed = true
+func (c *Command) Wait() error {
+	if err := c.doWait(); err != nil {
+		c.failed = true
 
 		if exiterr, ok := err.(*exec.ExitError); ok {
 			if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
-				self.exitCode = status.ExitStatus()
+				c.exitCode = status.ExitStatus()
 			}
 		} else {
 			if err != errorTimeout {
 				return err
 			} else {
-				self.Kill()
+				c.Kill()
 			}
 		}
 	}
 
-	self.endTime = time.Now()
-	self.buildResponse()
+	c.endTime = time.Now()
+	c.buildResponse()
 
 	return nil
 }
 
 // Kill causes the Command to exit immediately.
-func (self *Command) Kill() error {
-	self.failed = true
-	self.exitCode = -1
+func (c *Command) Kill() error {
+	c.failed = true
+	c.exitCode = -1
 
-	return self.cmd.Process.Kill()
+	return c.cmd.Process.Kill()
 }
 
-func (self *Command) doWait() error {
-	if self.params.timeout != 0 {
-		return self.doWaitWithTimeout()
+func (c *Command) doWait() error {
+	if c.params.timeout != 0 {
+		return c.doWaitWithTimeout()
 	}
 
-	return self.doWaitWithoutTimeout()
+	return c.doWaitWithoutTimeout()
 }
 
-func (self *Command) doWaitWithoutTimeout() error {
-	return self.cmd.Wait()
+func (c *Command) doWaitWithoutTimeout() error {
+	return c.cmd.Wait()
 }
 
-func (self *Command) doWaitWithTimeout() error {
+func (c *Command) doWaitWithTimeout() error {
 	go func() {
-		time.Sleep(self.params.timeout)
-		self.Kill()
+		time.Sleep(c.params.timeout)
+		c.Kill()
 	}()
 
-	return self.cmd.Wait()
+	return c.cmd.Wait()
 }
 
-func (self *Command) buildResponse() {
+func (c *Command) buildResponse() {
 	response := &ExecutionResponse{
-		RealTime: self.endTime.Sub(self.startTime),
-		UserTime: self.cmd.ProcessState.UserTime(),
-		SysTime:  self.cmd.ProcessState.UserTime(),
-		Rusage:   self.cmd.ProcessState.SysUsage().(*syscall.Rusage),
-		Stdout:   self.stdout.Bytes(),
-		Stderr:   self.stderr.Bytes(),
-		Pid:      self.cmd.Process.Pid,
-		Failed:   self.failed,
-		ExitCode: self.exitCode,
-		User:     self.params.user,
+		RealTime: c.endTime.Sub(c.startTime),
+		UserTime: c.cmd.ProcessState.UserTime(),
+		SysTime:  c.cmd.ProcessState.UserTime(),
+		Rusage:   c.cmd.ProcessState.SysUsage().(*syscall.Rusage),
+		Stdout:   c.stdout.Bytes(),
+		Stderr:   c.stderr.Bytes(),
+		Pid:      c.cmd.Process.Pid,
+		Failed:   c.failed,
+		ExitCode: c.exitCode,
+		User:     c.params.user,
 	}
 
-	self.response = response
+	c.response = response
 }
 
 // GetResponse returns a ExecutionResponse struct, must be called at the end
 // of the execution
-func (self *Command) GetResponse() *ExecutionResponse {
-	return self.response
+func (c *Command) GetResponse() *ExecutionResponse {
+	return c.response
 }
